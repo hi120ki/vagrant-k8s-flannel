@@ -11,11 +11,15 @@ fi
 echo "[i] install helm"
 cd ~ ; curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 ; chmod 700 get_helm.sh ; ./get_helm.sh
 
-echo "[i] add bash alias"
+echo "[i] add shell alias"
 # https://github.com/ahmetb/kubectl-aliases
 curl -fsSL "https://raw.githubusercontent.com/ahmetb/kubectl-aliases/master/.kubectl_aliases" -o ~/.kubectl_aliases
 echo '[ -f ~/.kubectl_aliases ] && source ~/.kubectl_aliases' >> ~/.bashrc
 echo 'function kubectl() { echo "+ kubectl $@">&2; command kubectl $@; }' >> ~/.bashrc
+if [ -f ~/.config/fish/config.fish ]; then
+  curl -fsSL "https://raw.githubusercontent.com/ahmetb/kubectl-aliases/master/.kubectl_aliases.fish" -o ~/.kubectl_aliases.fish
+  echo 'test -f ~/.kubectl_aliases.fish && source ~/.kubectl_aliases.fish' >> ~/.config/fish/config.fish
+fi
 
 echo "[i] network config"
 cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
@@ -92,9 +96,9 @@ echo "[+] coredns pending done"
 
 echo "[i] install flanneld"
 sudo mkdir -p /opt/bin
-sudo wget -q https://github.com/flannel-io/flannel/releases/download/v0.18.1/flanneld-amd64 -O /opt/bin/flanneld
+sudo wget -q https://github.com/flannel-io/flannel/releases/download/v0.21.0/flanneld-amd64 -O /opt/bin/flanneld
 sudo chmod +x /opt/bin/flanneld
-curl -fsSL https://raw.githubusercontent.com/flannel-io/flannel/v0.18.1/Documentation/kube-flannel.yml | sed -e "s/10.244.0.0/192.168.0.0/g" | kubectl apply -f - || true
+curl -fsSL https://raw.githubusercontent.com/flannel-io/flannel/v0.21.0/Documentation/kube-flannel.yml | sed -e "s/10.244.0.0/192.168.0.0/g" | kubectl apply -f - || true
 
 c1=$(kubectl get pods -A | grep -c "Running") || true
 c2=$(kubectl get pods -A | grep -c "Pending") || true
@@ -121,5 +125,21 @@ do
 done
 sleep 3
 echo "[+] coredns running done"
+
+echo "[i] enable hostpath provisioner"
+sudo cat /etc/kubernetes/manifests/kube-controller-manager.yaml | \
+  yq -e '.spec.containers[].command += ["--enable-hostpath-provisioner=true"]' | \
+  sudo tee /etc/kubernetes/manifests/kube-controller-manager.yaml
+
+echo "[i] add storageclass"
+cat <<EOF | kubectl apply -f -
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: standard
+  annotations:
+    storageclass.beta.kubernetes.io/is-default-class: "true"
+provisioner: kubernetes.io/host-path
+EOF
 
 echo "[+] All Done"
