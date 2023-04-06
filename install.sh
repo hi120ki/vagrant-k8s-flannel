@@ -96,9 +96,9 @@ echo "[+] coredns pending done"
 
 echo "[i] install flanneld"
 sudo mkdir -p /opt/bin
-sudo wget -q https://github.com/flannel-io/flannel/releases/download/v0.21.0/flanneld-amd64 -O /opt/bin/flanneld
+sudo wget -q https://github.com/flannel-io/flannel/releases/download/v0.21.4/flanneld-amd64 -O /opt/bin/flanneld
 sudo chmod +x /opt/bin/flanneld
-curl -fsSL https://raw.githubusercontent.com/flannel-io/flannel/v0.21.0/Documentation/kube-flannel.yml | sed -e "s/10.244.0.0/192.168.0.0/g" | kubectl apply -f - || true
+curl -fsSL https://raw.githubusercontent.com/flannel-io/flannel/v0.21.4/Documentation/kube-flannel.yml | sed -e "s/10.244.0.0/192.168.0.0/g" | kubectl apply -f - || true
 
 c1=$(kubectl get pods -A | grep -c "Running") || true
 c2=$(kubectl get pods -A | grep -c "Pending") || true
